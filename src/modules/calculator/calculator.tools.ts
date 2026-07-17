@@ -28,46 +28,65 @@ export class CalculatorTools {
   })
   @Widget('calculator-result')
   async calculate(input: any, ctx: ExecutionContext) {
-    ctx.logger.info('Performing calculation', {
-      operation: input.operation,
-      a: input.a,
-      b: input.b
-    });
 
-    let result: number;
-    let symbol: string;
+    console.log("🔥🔥🔥 YOUR MCP SERVER WAS CALLED 🔥🔥🔥");
+    console.log("Received input:", input);
 
-    switch (input.operation) {
-      case 'add':
-        result = input.a + input.b;
-        symbol = '+';
-        break;
-      case 'subtract':
-        result = input.a - input.b;
-        symbol = '-';
-        break;
-      case 'multiply':
-        result = input.a * input.b;
-        symbol = '×';
-        break;
-      case 'divide':
-        if (input.b === 0) {
-          throw new Error('Cannot divide by zero');
-        }
-        result = input.a / input.b;
-        symbol = '÷';
-        break;
-      default:
-        throw new Error('Invalid operation');
+    ctx.logger.info("🔥 CALCULATE TOOL INVOKED", input);
+
+    try {
+      let result: number;
+      let symbol: string;
+
+      switch (input.operation) {
+        case 'add':
+          result = input.a + input.b;
+          symbol = '+';
+          break;
+
+        case 'subtract':
+          result = input.a - input.b;
+          symbol = '-';
+          break;
+
+        case 'multiply':
+          result = input.a * input.b;
+          symbol = '×';
+          break;
+
+        case 'divide':
+          if (input.b === 0) {
+            throw new Error('Cannot divide by zero');
+          }
+          result = input.a / input.b;
+          symbol = '÷';
+          break;
+
+        default:
+          throw new Error('Invalid operation');
+      }
+
+      const response = {
+        operation: input.operation,
+        a: input.a,
+        b: input.b,
+        result,
+        expression: `${input.a} ${symbol} ${input.b} = ${result}`,
+        server: "Ar3ive MCP Server"
+      };
+
+      console.log("Returning:", response);
+      ctx.logger.info("Calculation completed successfully", response);
+
+      return response;
+
+    } catch (err) {
+      console.error("Calculation failed:", err);
+      ctx.logger.error("Calculation failed", {
+        error: err instanceof Error ? err.message : String(err)
+      });
+      throw err;
     }
-
-    return {
-      operation: input.operation,
-      a: input.a,
-      b: input.b,
-      result,
-      expression: `${input.a} ${symbol} ${input.b} = ${result}`
-    };
   }
 
   @Tool({
@@ -83,84 +102,132 @@ export class CalculatorTools {
     })
   })
   async convertTemperature(input: any, ctx: ExecutionContext) {
-    ctx.logger.info('Processing temperature file', {
-      name: input.file_name,
-      type: input.file_type,
-      value: input.value,
-      from: input.from_unit,
-      to: input.to_unit
-    });
 
-    // Save file to uploads directory
-    const uploadsDir = path.join(process.cwd(), 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
+    console.log("🔥🔥🔥 TEMPERATURE TOOL WAS CALLED 🔥🔥🔥");
+    console.log("Received input:", input);
 
-    const filePath = path.join(uploadsDir, input.file_name);
+    ctx.logger.info("🔥 TEMPERATURE TOOL INVOKED", input);
 
-    // Decode base64
-    if (input.file_content) {
-      try {
-        const matches = input.file_content.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        let buffer;
+    try {
 
-        if (matches && matches.length === 3) {
-          buffer = Buffer.from(matches[2], 'base64');
-        } else {
-          buffer = Buffer.from(input.file_content, 'base64');
-        }
+      const uploadsDir = path.join(process.cwd(), 'uploads');
 
-        fs.writeFileSync(filePath, buffer);
-        ctx.logger.info(`Saved file to ${filePath}`);
-      } catch (e) {
-        ctx.logger.error('Failed to save file', { error: e instanceof Error ? e.message : String(e) });
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
       }
-    }
 
-    const fileStats = {
-      name: input.file_name,
-      type: input.file_type,
-      saved_path: filePath,
-      status: 'saved'
-    };
+      const filePath = path.join(uploadsDir, input.file_name);
 
-    let result: number | null = null;
-    let message = `Successfully processed and saved file ${input.file_name}`;
+      if (input.file_content) {
+        try {
+          const matches = input.file_content.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
 
-    // Perform conversion logic
-    if (input.value !== undefined && input.from_unit && input.to_unit) {
-      try {
+          let buffer;
+
+          if (matches && matches.length === 3) {
+            buffer = Buffer.from(matches[2], 'base64');
+          } else {
+            buffer = Buffer.from(input.file_content, 'base64');
+          }
+
+          fs.writeFileSync(filePath, buffer);
+
+          console.log("File saved:", filePath);
+
+          ctx.logger.info("File saved", {
+            path: filePath
+          });
+
+        } catch (e) {
+
+          console.error("File save failed:", e);
+
+          ctx.logger.error("Failed to save file", {
+            error: e instanceof Error ? e.message : String(e)
+          });
+        }
+      }
+
+      const fileStats = {
+        name: input.file_name,
+        type: input.file_type,
+        saved_path: filePath,
+        status: 'saved'
+      };
+
+      let result: number | null = null;
+
+      let message = `Successfully processed and saved file ${input.file_name}`;
+
+      if (
+        input.value !== undefined &&
+        input.from_unit &&
+        input.to_unit
+      ) {
+
         message += `. Converting ${input.value}°${input.from_unit} to ${input.to_unit}`;
 
         if (input.from_unit === input.to_unit) {
           result = input.value;
-        } else if (input.from_unit === 'C' && input.to_unit === 'F') {
-          result = (input.value * 9 / 5) + 32;
-        } else if (input.from_unit === 'F' && input.to_unit === 'C') {
-          result = (input.value - 32) * 5 / 9;
-        } else {
-          throw new Error('Unsupported unit conversion');
         }
 
-        // Round to 2 decimal places
+        else if (input.from_unit === 'C' && input.to_unit === 'F') {
+          result = (input.value * 9 / 5) + 32;
+        }
+
+        else if (input.from_unit === 'F' && input.to_unit === 'C') {
+          result = (input.value - 32) * 5 / 9;
+        }
+
+        else {
+          throw new Error("Unsupported unit conversion");
+        }
+
         if (result !== null) {
           result = Math.round(result * 100) / 100;
           message += `. Result: ${result}°${input.to_unit}`;
         }
-      } catch (e: any) {
-        message += `. Conversion failed: ${e.message}`;
-      }
-    } else {
-      message += `. No valid conversion parameters detected from manual input or file extraction.`;
-    }
 
-    return {
-      status: 'success',
-      message,
-      file_info: fileStats,
-      conversion_result: result !== null ? { value: result, unit: input.to_unit } : null,
-      original_value: input.value !== undefined ? { value: input.value, unit: input.from_unit } : null
-    };
+      } else {
+
+        message += `. No valid conversion parameters detected from manual input or file extraction.`;
+
+      }
+
+      const response = {
+        status: 'success',
+        message,
+        file_info: fileStats,
+        conversion_result: result !== null
+          ? {
+              value: result,
+              unit: input.to_unit
+            }
+          : null,
+        original_value: input.value !== undefined
+          ? {
+              value: input.value,
+              unit: input.from_unit
+            }
+          : null,
+        server: "Ar3ive MCP Server"
+      };
+
+      console.log("Returning:", response);
+
+      ctx.logger.info("Temperature conversion completed", response);
+
+      return response;
+
+    } catch (err) {
+
+      console.error("Temperature tool failed:", err);
+
+      ctx.logger.error("Temperature tool failed", {
+        error: err instanceof Error ? err.message : String(err)
+      });
+
+      throw err;
+    }
   }
 }
