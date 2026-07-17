@@ -1,0 +1,7 @@
+node_modules/
+dist/
+src/widgets/out/
+.next/
+coverage/
+.env
+*.log
